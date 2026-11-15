@@ -1,0 +1,77 @@
+# Private graders for the public vgi.agent_test_tasks in the worker's catalog metadata.
+# `vgi-lint lint --ai` runs an agent on each prompt and grades it (VGI920).
+#
+# Every tableau table needs a `tableau` secret pointing at a Tableau site (the offline
+# replay site in test/mock_api/server.py works too: SERVER_URL http://127.0.0.1:<port>,
+# SITE_CONTENT_URL 'acme', PAT_NAME 'vgi-test', PAT_SECRET 'test-pat-secret'). Content
+# and configuration are stable between the agent's run and the reference run, so every
+# task compares against a reference query.
+tasks:
+  - name: top_dashboards
+    reference_sql: SELECT title, view_count FROM tableau.main.dashboards ORDER BY view_count DESC LIMIT 3
+  - name: finance_dashboards
+    reference_sql: SELECT title FROM tableau.main.dashboards WHERE folder_path = 'Finance/Quarterly' ORDER BY title
+  - name: unviewed_charts
+    reference_sql: SELECT title FROM tableau.main.charts WHERE view_count = 0 ORDER BY title
+  - name: certified_sources
+    reference_sql: SELECT title FROM tableau.main.data_sources WHERE is_certified ORDER BY title
+  - name: snowflake_connections
+    reference_sql: >-
+      SELECT content_name, username FROM tableau.main.connections
+      WHERE content_type = 'datasource' AND connection_type = 'snowflake' ORDER BY content_name
+  - name: creators
+    reference_sql: SELECT site_role, count(*) AS users FROM tableau.main.users GROUP BY site_role ORDER BY site_role
+  - name: finance_members
+    reference_sql: SELECT user_name FROM tableau.main.group_members WHERE group_name = 'Finance' ORDER BY user_name
+  - name: failed_refreshes
+    reference_sql: >-
+      SELECT title FROM tableau.main.jobs
+      WHERE status = 'Failed' AND job_type IN ('refresh_extracts', 'increment_extracts') ORDER BY title
+  - name: flow_failures
+    reference_sql: SELECT flow_name, started_at FROM tableau.main.flow_runs WHERE status = 'Failed' ORDER BY started_at
+  - name: orders_impact
+    reference_sql: >-
+      SELECT content_type, content_name FROM tableau.main.lineage_tables
+      WHERE qualified_name = 'analytics.public.orders' ORDER BY content_type, content_name
+  - name: custom_sql_count
+    check_sql: >-
+      SELECT count(*) = 2 AND list_sort(flatten(list(workbook_names))) = ['Campaign Performance', 'Q3 Results']
+      FROM tableau.main.queries
+  - name: failing_tasks
+    reference_sql: >-
+      SELECT id, content_id, consecutive_failed_count FROM tableau.main.extract_refresh_tasks
+      WHERE consecutive_failed_count > 1 ORDER BY id
+  - name: revision_count
+    reference_sql: >-
+      SELECT count(*) AS revisions FROM tableau.main.revisions
+      WHERE content_type = 'workbook' AND content_name = 'Sales Overview'
+  - name: unified_failed
+    reference_sql: SELECT run_id, pipeline FROM tableau.unified.runs WHERE status = 'failed' ORDER BY run_id
+  - name: workbook_views
+    reference_sql: >-
+      SELECT workbook_name, sum(view_count) AS views FROM tableau.main.content_usage
+      GROUP BY workbook_name ORDER BY workbook_name
+  - name: alert_audience
+    reference_sql: SELECT subject, recipient_count FROM tableau.main.data_alerts ORDER BY recipient_count DESC LIMIT 1
+  - name: most_favorited
+    reference_sql: >-
+      SELECT content_name, count(*) AS favorited_by FROM tableau.main.favorites
+      WHERE content_type = 'view' GROUP BY content_name ORDER BY favorited_by DESC LIMIT 1
+  - name: calculated_fields
+    reference_sql: >-
+      SELECT DISTINCT field_name, formula FROM tableau.main.field_lineage
+      WHERE content_name = 'Sales Overview' AND field_type = 'CalculatedField' ORDER BY field_name
+  - name: flow_owners
+    reference_sql: SELECT name, owner FROM tableau.main.flows ORDER BY name
+  - name: nested_projects
+    reference_sql: SELECT folder_path FROM tableau.main.folders WHERE NOT top_level ORDER BY folder_path
+  - name: directory_groups
+    reference_sql: SELECT name, domain_name FROM tableau.main.groups WHERE domain_name <> 'local' ORDER BY name
+  - name: suspended_schedules
+    reference_sql: SELECT name FROM tableau.main.schedules WHERE state = 'Suspended' ORDER BY name
+  - name: revision_setting
+    reference_sql: SELECT revision_history_enabled, revision_limit FROM tableau.main.sites
+  - name: suspended_subscriptions
+    reference_sql: SELECT count(*) AS suspended FROM tableau.main.subscriptions WHERE suspended
+  - name: largest_workbook
+    reference_sql: SELECT name, size_mb FROM tableau.main.workbooks ORDER BY size_mb DESC LIMIT 1

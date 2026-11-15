@@ -1,0 +1,148 @@
+{
+  "site": {"id": "a1b2c3d4-0000-4000-8000-000000000001", "name": "Acme Analytics", "contentUrl": "acme", "adminMode": "ContentAndUsers", "state": "Active", "userQuota": "100", "storageQuota": "102400", "revisionHistoryEnabled": true, "revisionLimit": "25", "catalogEnabled": true, "subscribeOthersEnabled": true},
+  "users": [
+    {"id": "u-ada", "name": "ada@example.com", "fullName": "Ada Lovelace", "email": "ada@example.com", "siteRole": "SiteAdministratorCreator", "lastLogin": "2026-11-10T09:00:00Z", "authSetting": "SAML", "externalAuthUserId": "", "locale": "en_US", "language": "en", "domain": {"name": "local"}},
+    {"id": "u-grace", "name": "grace@example.com", "fullName": "Grace Hopper", "email": "grace@example.com", "siteRole": "Creator", "lastLogin": "2026-11-01T12:30:00Z", "authSetting": "SAML", "domain": {"name": "local"}},
+    {"id": "u-alan", "name": "alan@example.com", "fullName": "Alan Turing", "email": "alan@example.com", "siteRole": "Explorer", "lastLogin": "2026-06-01T08:00:00Z", "authSetting": "SAML", "domain": {"name": "local"}},
+    {"id": "u-kat", "name": "kat@example.com", "fullName": "Katherine Johnson", "email": "kat@example.com", "siteRole": "Viewer", "authSetting": "SAML", "domain": {"name": "local"}},
+    {"id": "u-margaret", "name": "margaret@example.com", "fullName": "Margaret Hamilton", "email": "margaret@example.com", "siteRole": "Viewer", "lastLogin": "2026-10-15T16:45:00Z", "authSetting": "SAML", "domain": {"name": "local"}},
+    {"id": "u-radia", "name": "radia@example.com", "fullName": "Radia Perlman", "email": "radia@example.com", "siteRole": "Unlicensed", "authSetting": "SAML", "domain": {"name": "local"}}
+  ],
+  "projects": [
+    {"id": "p-finance", "name": "Finance", "description": "Finance reporting", "contentPermissions": "LockedToProject", "controllingPermissionsProjectId": "p-finance", "createdAt": "2024-01-10T10:00:00Z", "updatedAt": "2025-02-01T10:00:00Z", "owner": {"id": "u-ada"}},
+    {"id": "p-quarterly", "name": "Quarterly", "description": "Quarterly close", "parentProjectId": "p-finance", "contentPermissions": "ManagedByOwner", "controllingPermissionsProjectId": "p-finance", "createdAt": "2024-02-10T10:00:00Z", "updatedAt": "2025-03-01T10:00:00Z", "owner": {"id": "u-grace"}},
+    {"id": "p-marketing", "name": "Marketing", "description": "", "contentPermissions": "ManagedByOwner", "controllingPermissionsProjectId": "p-marketing", "createdAt": "2024-03-10T10:00:00Z", "updatedAt": "2024-03-10T10:00:00Z", "owner": {"id": "u-grace"}},
+    {"id": "p-sandbox", "name": "Sandbox", "description": "Personal experiments", "contentPermissions": "ManagedByOwner", "controllingPermissionsProjectId": "p-sandbox", "createdAt": "2025-05-10T10:00:00Z", "updatedAt": "2025-05-10T10:00:00Z", "owner": {"id": "u-alan"}}
+  ],
+  "workbooks": [
+    {"id": "wb-sales", "name": "Sales Overview", "description": "Company sales", "contentUrl": "SalesOverview", "webpageUrl": "https://acme.example/#/site/acme/workbooks/101", "showTabs": "true", "size": "12", "createdAt": "2025-03-01T09:00:00Z", "updatedAt": "2026-09-01T09:00:00Z", "encryptExtracts": "false", "defaultViewId": "v-sales-dash", "project": {"id": "p-finance", "name": "Finance"}, "owner": {"id": "u-ada"}, "tags": {"tag": [{"label": "finance"}, {"label": "certified"}]}},
+    {"id": "wb-q3", "name": "Q3 Results", "description": "", "contentUrl": "Q3Results", "webpageUrl": "https://acme.example/#/site/acme/workbooks/102", "showTabs": "false", "size": "4", "createdAt": "2025-10-01T09:00:00Z", "updatedAt": "2025-12-15T09:00:00Z", "encryptExtracts": "false", "defaultViewId": "v-q3-dash", "project": {"id": "p-quarterly", "name": "Quarterly"}, "owner": {"id": "u-grace"}, "tags": {}},
+    {"id": "wb-campaigns", "name": "Campaign Performance", "description": "Paid and organic campaigns", "contentUrl": "CampaignPerformance", "webpageUrl": "https://acme.example/#/site/acme/workbooks/103", "showTabs": "true", "size": "30", "createdAt": "2024-05-05T09:00:00Z", "updatedAt": "2026-11-02T09:00:00Z", "encryptExtracts": "true", "defaultViewId": "v-camp-dash", "project": {"id": "p-marketing", "name": "Marketing"}, "owner": {"id": "u-grace"}, "tags": {"tag": [{"label": "marketing"}]}},
+    {"id": "wb-scratch", "name": "Scratchpad", "description": "", "contentUrl": "Scratchpad", "webpageUrl": "https://acme.example/#/site/acme/workbooks/104", "showTabs": "true", "size": "1", "createdAt": "2026-01-10T09:00:00Z", "updatedAt": "2026-01-10T09:00:00Z", "encryptExtracts": "false", "defaultViewId": "v-scratch", "project": {"id": "p-sandbox", "name": "Sandbox"}, "owner": {"id": "u-alan"}}
+  ],
+  "views": [
+    {"id": "v-sales-dash", "name": "Sales Dashboard", "contentUrl": "SalesOverview/sheets/SalesDashboard", "viewUrlName": "SalesDashboard", "sheetType": "dashboard", "createdAt": "2025-03-01T09:00:00Z", "updatedAt": "2026-09-01T09:00:00Z", "workbook": {"id": "wb-sales"}, "project": {"id": "p-finance"}, "owner": {"id": "u-ada"}, "tags": {"tag": [{"label": "kpi"}]}, "usage": {"totalViewCount": "1520"}},
+    {"id": "v-sales-region", "name": "Sales by Region", "contentUrl": "SalesOverview/sheets/SalesbyRegion", "viewUrlName": "SalesbyRegion", "sheetType": "worksheet", "createdAt": "2025-03-01T09:00:00Z", "updatedAt": "2026-09-01T09:00:00Z", "workbook": {"id": "wb-sales"}, "project": {"id": "p-finance"}, "owner": {"id": "u-ada"}, "usage": {"totalViewCount": "340"}},
+    {"id": "v-sales-trend", "name": "Monthly Trend", "contentUrl": "SalesOverview/sheets/MonthlyTrend", "viewUrlName": "MonthlyTrend", "sheetType": "worksheet", "createdAt": "2025-03-01T09:00:00Z", "updatedAt": "2026-09-01T09:00:00Z", "workbook": {"id": "wb-sales"}, "project": {"id": "p-finance"}, "owner": {"id": "u-ada"}, "usage": {"totalViewCount": "0"}},
+    {"id": "v-q3-dash", "name": "Q3 Summary", "contentUrl": "Q3Results/sheets/Q3Summary", "viewUrlName": "Q3Summary", "sheetType": "dashboard", "createdAt": "2025-10-01T09:00:00Z", "updatedAt": "2025-12-15T09:00:00Z", "workbook": {"id": "wb-q3"}, "project": {"id": "p-quarterly"}, "owner": {"id": "u-grace"}, "usage": {"totalViewCount": "410"}},
+    {"id": "v-q3-story", "name": "Q3 Story", "contentUrl": "Q3Results/sheets/Q3Story", "viewUrlName": "Q3Story", "sheetType": "story", "createdAt": "2025-10-01T09:00:00Z", "updatedAt": "2025-12-15T09:00:00Z", "workbook": {"id": "wb-q3"}, "project": {"id": "p-quarterly"}, "owner": {"id": "u-grace"}, "usage": {"totalViewCount": "75"}},
+    {"id": "v-q3-margin", "name": "Margin Detail", "contentUrl": "Q3Results/sheets/MarginDetail", "viewUrlName": "MarginDetail", "sheetType": "worksheet", "createdAt": "2025-10-01T09:00:00Z", "updatedAt": "2025-12-15T09:00:00Z", "workbook": {"id": "wb-q3"}, "project": {"id": "p-quarterly"}, "owner": {"id": "u-grace"}, "usage": {"totalViewCount": "12"}},
+    {"id": "v-camp-dash", "name": "Campaign Dashboard", "contentUrl": "CampaignPerformance/sheets/CampaignDashboard", "viewUrlName": "CampaignDashboard", "sheetType": "dashboard", "createdAt": "2024-05-05T09:00:00Z", "updatedAt": "2026-11-02T09:00:00Z", "workbook": {"id": "wb-campaigns"}, "project": {"id": "p-marketing"}, "owner": {"id": "u-grace"}, "usage": {"totalViewCount": "980"}},
+    {"id": "v-camp-funnel", "name": "Funnel", "contentUrl": "CampaignPerformance/sheets/Funnel", "viewUrlName": "Funnel", "sheetType": "worksheet", "createdAt": "2024-05-05T09:00:00Z", "updatedAt": "2026-11-02T09:00:00Z", "workbook": {"id": "wb-campaigns"}, "project": {"id": "p-marketing"}, "owner": {"id": "u-grace"}, "usage": {"totalViewCount": "0"}},
+    {"id": "v-scratch", "name": "Sheet 1", "contentUrl": "Scratchpad/sheets/Sheet1", "viewUrlName": "Sheet1", "sheetType": "worksheet", "createdAt": "2026-01-10T09:00:00Z", "updatedAt": "2026-01-10T09:00:00Z", "workbook": {"id": "wb-scratch"}, "project": {"id": "p-sandbox"}, "owner": {"id": "u-alan"}, "usage": {"totalViewCount": "3"}}
+  ],
+  "datasources": [
+    {"id": "ds-orders", "name": "Orders", "type": "snowflake", "description": "Certified orders", "contentUrl": "Orders", "webpageUrl": "https://acme.example/#/site/acme/datasources/201", "isCertified": true, "certificationNote": "Finance-approved", "hasExtracts": true, "encryptExtracts": "false", "useRemoteQueryAgent": false, "createdAt": "2024-06-01T09:00:00Z", "updatedAt": "2026-11-14T02:03:05Z", "project": {"id": "p-finance", "name": "Finance"}, "owner": {"id": "u-ada"}, "tags": {"tag": [{"label": "gold"}]}},
+    {"id": "ds-campaigns", "name": "Campaign Events", "type": "postgres", "description": "", "contentUrl": "CampaignEvents", "webpageUrl": "https://acme.example/#/site/acme/datasources/202", "isCertified": false, "hasExtracts": false, "encryptExtracts": "false", "useRemoteQueryAgent": true, "createdAt": "2024-07-01T09:00:00Z", "updatedAt": "2025-07-01T09:00:00Z", "project": {"id": "p-marketing", "name": "Marketing"}, "owner": {"id": "u-grace"}},
+    {"id": "ds-hr", "name": "Headcount", "type": "sqlserver", "description": "HR headcount", "contentUrl": "Headcount", "webpageUrl": "https://acme.example/#/site/acme/datasources/203", "isCertified": false, "hasExtracts": true, "encryptExtracts": "true", "useRemoteQueryAgent": false, "createdAt": "2025-08-01T09:00:00Z", "updatedAt": "2025-08-01T09:00:00Z", "project": {"id": "p-sandbox", "name": "Sandbox"}, "owner": {"id": "u-alan"}}
+  ],
+  "connections": {
+    "datasources/ds-orders": [{"id": "c-orders", "type": "snowflake", "serverAddress": "acme.snowflakecomputing.com", "serverPort": "443", "userName": "TABLEAU_SVC", "password": "hunter2-never-returned", "embedPassword": true, "queryTaggingEnabled": true, "datasource": {"id": "ds-orders", "name": "Orders"}}],
+    "datasources/ds-campaigns": [{"id": "c-campaigns", "type": "postgres", "serverAddress": "pg.internal", "serverPort": "5432", "userName": "analyst", "embedPassword": false, "queryTaggingEnabled": false, "datasource": {"id": "ds-campaigns", "name": "Campaign Events"}}],
+    "datasources/ds-hr": [{"id": "c-hr", "type": "sqlserver", "serverAddress": "hr-sql.internal", "serverPort": "1433", "userName": "hr_reader", "embedPassword": true, "queryTaggingEnabled": false, "datasource": {"id": "ds-hr", "name": "Headcount"}}],
+    "workbooks/wb-sales": [{"id": "c-wb-sales", "type": "sqlproxy", "serverAddress": "acme.example", "serverPort": "443", "userName": "", "embedPassword": false, "queryTaggingEnabled": false, "datasource": {"id": "ds-orders", "name": "Orders"}}],
+    "workbooks/wb-q3": [{"id": "c-wb-q3", "type": "snowflake", "serverAddress": "acme.snowflakecomputing.com", "serverPort": "443", "userName": "Q3_READER", "embedPassword": false, "queryTaggingEnabled": false, "datasource": {"id": "eds-q3", "name": "Q3 extract"}}],
+    "workbooks/wb-campaigns": [{"id": "c-wb-campaigns", "type": "sqlproxy", "serverAddress": "acme.example", "serverPort": "443", "userName": "", "embedPassword": false, "queryTaggingEnabled": false, "datasource": {"id": "ds-campaigns", "name": "Campaign Events"}}],
+    "workbooks/wb-scratch": [{"id": "c-wb-scratch", "type": "excel-direct", "serverAddress": "", "serverPort": "", "userName": "", "embedPassword": false, "queryTaggingEnabled": false, "datasource": {"id": "eds-scratch", "name": "Book1"}}]
+  },
+  "groups": [
+    {"id": "g-all", "name": "All Users", "domain": {"name": "local"}},
+    {"id": "g-finance", "name": "Finance", "domain": {"name": "local"}},
+    {"id": "g-mkt", "name": "Marketing", "domain": {"name": "example.com"}, "import": {"domainName": "example.com", "siteRole": "Explorer", "grantLicenseMode": "onLogin"}}
+  ],
+  "group_users": {
+    "g-all": ["u-ada", "u-grace", "u-alan", "u-kat", "u-margaret", "u-radia"],
+    "g-finance": ["u-ada", "u-grace"],
+    "g-mkt": ["u-grace", "u-kat"]
+  },
+  "favorites": {
+    "u-ada": [{"label": "Sales Dashboard", "position": "1", "addedAt": "2026-01-02T10:00:00Z", "view": {"id": "v-sales-dash", "name": "Sales Dashboard"}}, {"label": "Q3 Results", "position": "2", "addedAt": "2026-01-03T10:00:00Z", "workbook": {"id": "wb-q3", "name": "Q3 Results"}}],
+    "u-grace": [{"label": "Sales Dashboard", "position": "1", "addedAt": "2026-02-02T10:00:00Z", "view": {"id": "v-sales-dash", "name": "Sales Dashboard"}}, {"label": "Orders", "position": "2", "addedAt": "2026-02-03T10:00:00Z", "datasource": {"id": "ds-orders", "name": "Orders"}}],
+    "u-kat": [{"label": "Campaign Dashboard", "position": "1", "addedAt": "2026-03-02T10:00:00Z", "view": {"id": "v-camp-dash", "name": "Campaign Dashboard"}}]
+  },
+  "subscriptions": [
+    {"id": "sub-1", "subject": "Weekly sales", "attachImage": true, "attachPdf": true, "pageOrientation": "PORTRAIT", "pageSizeOption": "A4", "suspended": false, "content": {"id": "v-sales-dash", "type": "View", "sendIfViewEmpty": false}, "schedule": {"id": "sch-weekly", "name": "Weekly", "frequency": "Weekly", "nextRunAt": "2026-11-17T07:00:00Z"}, "user": {"id": "u-kat", "name": "kat@example.com"}},
+    {"id": "sub-2", "subject": "Q3 pack", "attachImage": false, "attachPdf": true, "pageOrientation": "LANDSCAPE", "pageSizeOption": "LETTER", "suspended": true, "content": {"id": "wb-q3", "type": "Workbook", "sendIfViewEmpty": true}, "schedule": {"id": "sch-weekly", "name": "Weekly", "frequency": "Weekly"}, "user": {"id": "u-margaret", "name": "margaret@example.com"}},
+    {"id": "sub-3", "subject": "Campaigns daily", "attachImage": true, "attachPdf": false, "suspended": false, "content": {"id": "v-camp-dash", "type": "View", "sendIfViewEmpty": false}, "schedule": {"id": "sch-nightly", "name": "Nightly", "frequency": "Daily"}, "user": {"id": "u-ada", "name": "ada@example.com"}}
+  ],
+  "data_alerts": [
+    {"id": "alert-1", "subject": "Sales drop", "frequency": "daily", "public": "true", "createdAt": "2026-04-01T10:00:00Z", "updatedAt": "2026-04-02T10:00:00Z", "owner": {"id": "u-ada", "name": "ada@example.com"}, "view": {"id": "v-sales-dash", "name": "Sales Dashboard", "workbook": {"id": "wb-sales", "name": "Sales Overview"}}, "recipients": {"recipient": [{"id": "u-ada", "lastSent": "2026-11-14T08:00:00Z"}, {"id": "u-grace"}, {"id": "u-kat"}]}},
+    {"id": "alert-2", "subject": "Funnel empty", "frequency": "hourly", "public": "false", "createdAt": "2026-05-01T10:00:00Z", "updatedAt": "2026-05-01T10:00:00Z", "owner": {"id": "u-grace", "name": "grace@example.com"}, "view": {"id": "v-camp-funnel", "name": "Funnel", "workbook": {"id": "wb-campaigns", "name": "Campaign Performance"}}, "recipients": {"recipient": [{"id": "u-grace"}]}}
+  ],
+  "schedules": [
+    {"id": "sch-nightly", "name": "Nightly", "state": "Active", "priority": "50", "createdAt": "2024-01-01T00:00:00Z", "updatedAt": "2024-01-01T00:00:00Z", "type": "Extract", "frequency": "Daily", "nextRunAt": "2026-11-16T02:00:00Z", "executionOrder": "Parallel", "frequencyDetails": {"start": "02:00:00", "intervals": {"interval": [{"hours": "24"}]}}},
+    {"id": "sch-weekly", "name": "Weekly", "state": "Active", "priority": "50", "createdAt": "2024-01-01T00:00:00Z", "updatedAt": "2024-01-01T00:00:00Z", "type": "Subscription", "frequency": "Weekly", "nextRunAt": "2026-11-17T07:00:00Z", "executionOrder": "Parallel", "frequencyDetails": {"start": "07:00:00", "intervals": {"interval": [{"weekDay": "Monday"}]}}},
+    {"id": "sch-flows", "name": "Flow nightly", "state": "Suspended", "priority": "60", "createdAt": "2024-02-01T00:00:00Z", "updatedAt": "2025-02-01T00:00:00Z", "type": "Flow", "frequency": "Daily", "nextRunAt": "2026-11-16T04:00:00Z", "executionOrder": "Serial", "frequencyDetails": {"start": "04:00:00"}}
+  ],
+  "extract_tasks": [
+    {"extractRefresh": {"id": "task-orders", "priority": "50", "consecutiveFailedCount": "0", "type": "FullRefresh", "schedule": {"id": "sch-nightly", "name": "Nightly", "state": "Active", "frequency": "Daily", "nextRunAt": "2026-11-16T02:00:00Z", "frequencyDetails": {"start": "02:00:00"}}, "datasource": {"id": "ds-orders"}}},
+    {"extractRefresh": {"id": "task-hr", "priority": "60", "consecutiveFailedCount": "3", "type": "IncrementalRefresh", "schedule": {"frequency": "Daily", "nextRunAt": "2026-11-16T03:00:00Z", "frequencyDetails": {"start": "03:00:00"}}, "datasource": {"id": "ds-hr"}}},
+    {"extractRefresh": {"id": "task-q3", "priority": "50", "consecutiveFailedCount": "1", "type": "FullRefresh", "schedule": {"frequency": "Weekly", "nextRunAt": "2026-11-17T02:00:00Z", "frequencyDetails": {"start": "02:00:00"}}, "workbook": {"id": "wb-q3"}}}
+  ],
+  "jobs": [
+    {"id": "job-1", "status": "Success", "createdAt": "2026-11-14T02:00:00Z", "startedAt": "2026-11-14T02:00:05Z", "endedAt": "2026-11-14T02:03:05Z", "priority": "50", "jobType": "refresh_extracts", "title": "Orders", "subtitle": "Data Source"},
+    {"id": "job-2", "status": "Failed", "createdAt": "2026-11-14T03:00:00Z", "startedAt": "2026-11-14T03:00:10Z", "endedAt": "2026-11-14T03:01:10Z", "priority": "60", "jobType": "increment_extracts", "title": "Headcount", "subtitle": "Data Source"},
+    {"id": "job-3", "status": "Failed", "createdAt": "2026-11-13T02:00:00Z", "startedAt": "2026-11-13T02:00:30Z", "endedAt": "2026-11-13T02:10:30Z", "priority": "50", "jobType": "refresh_extracts", "title": "Q3 Results", "subtitle": "Workbook"},
+    {"id": "job-4", "status": "Success", "createdAt": "2026-11-14T04:00:00Z", "startedAt": "2026-11-14T04:00:00Z", "endedAt": "2026-11-14T04:10:00Z", "priority": "50", "jobType": "run_flow", "title": "Clean Orders", "subtitle": "Flow"},
+    {"id": "job-5", "status": "InProgress", "createdAt": "2026-11-15T02:00:00Z", "startedAt": "2026-11-15T02:00:04Z", "priority": "50", "jobType": "refresh_extracts", "title": "Orders", "subtitle": "Data Source"},
+    {"id": "job-6", "status": "Success", "createdAt": "2026-11-14T07:00:00Z", "startedAt": "2026-11-14T07:00:01Z", "endedAt": "2026-11-14T07:00:09Z", "priority": "50", "jobType": "single_subscription_notify", "title": "Weekly sales", "subtitle": "Subscription"},
+    {"id": "job-7", "status": "Pending", "createdAt": "2026-11-15T03:00:00Z", "priority": "60", "jobType": "increment_extracts", "title": "Headcount", "subtitle": "Data Source"}
+  ],
+  "flows": [
+    {"id": "f-clean", "name": "Clean Orders", "description": "Dedupe orders", "webpageUrl": "https://acme.example/#/site/acme/flows/301", "fileType": "tflx", "createdAt": "2025-01-01T00:00:00Z", "updatedAt": "2026-10-01T00:00:00Z", "project": {"id": "p-finance", "name": "Finance"}, "owner": {"id": "u-ada"}},
+    {"id": "f-leads", "name": "Lead Scoring", "description": "", "webpageUrl": "https://acme.example/#/site/acme/flows/302", "fileType": "tfl", "createdAt": "2025-06-01T00:00:00Z", "updatedAt": "2025-06-01T00:00:00Z", "project": {"id": "p-marketing", "name": "Marketing"}, "owner": {"id": "u-grace"}, "tags": {"tag": [{"label": "ml"}]}}
+  ],
+  "flow_runs": [
+    {"id": "fr-1", "flowId": "f-clean", "status": "Success", "startedAt": "2026-11-14T04:00:00Z", "completedAt": "2026-11-14T04:10:00Z", "progress": "100", "backgroundJobId": "job-4"},
+    {"id": "fr-2", "flowId": "f-leads", "status": "Failed", "startedAt": "2026-11-13T05:00:00Z", "completedAt": "2026-11-13T05:02:00Z", "progress": "40", "backgroundJobId": "job-8"},
+    {"id": "fr-3", "flowId": "f-leads", "status": "Success", "startedAt": "2026-11-14T05:00:00Z", "completedAt": "2026-11-14T05:05:00Z", "progress": "100", "backgroundJobId": "job-9"}
+  ],
+  "revisions": {
+    "workbooks/wb-sales": [{"revisionNumber": "1", "publishedAt": "2025-03-01T09:00:00Z", "deleted": false, "current": false, "sizeInBytes": "10240", "publisher": {"id": "u-ada", "name": "ada@example.com"}}, {"revisionNumber": "2", "publishedAt": "2025-08-01T09:00:00Z", "deleted": false, "current": false, "sizeInBytes": "11264", "publisher": {"id": "u-ada", "name": "ada@example.com"}}, {"revisionNumber": "3", "publishedAt": "2026-09-01T09:00:00Z", "deleted": false, "current": true, "sizeInBytes": "12288", "publisher": {"id": "u-grace", "name": "grace@example.com"}}],
+    "workbooks/wb-q3": [{"revisionNumber": "1", "publishedAt": "2025-12-15T09:00:00Z", "deleted": false, "current": true, "sizeInBytes": "4096", "publisher": {"id": "u-grace", "name": "grace@example.com"}}],
+    "workbooks/wb-campaigns": [{"revisionNumber": "1", "publishedAt": "2024-05-05T09:00:00Z", "deleted": true, "current": false, "sizeInBytes": "20480", "publisher": {"id": "u-grace", "name": "grace@example.com"}}, {"revisionNumber": "2", "publishedAt": "2026-11-02T09:00:00Z", "deleted": false, "current": true, "sizeInBytes": "30720", "publisher": {"id": "u-grace", "name": "grace@example.com"}}],
+    "workbooks/wb-scratch": [{"revisionNumber": "1", "publishedAt": "2026-01-10T09:00:00Z", "deleted": false, "current": true, "sizeInBytes": "1024", "publisher": {"id": "u-alan", "name": "alan@example.com"}}],
+    "datasources/ds-orders": [{"revisionNumber": "1", "publishedAt": "2024-06-01T09:00:00Z", "deleted": false, "current": false, "sizeInBytes": "2048", "publisher": {"id": "u-ada", "name": "ada@example.com"}}, {"revisionNumber": "2", "publishedAt": "2026-11-14T02:03:05Z", "deleted": false, "current": true, "sizeInBytes": "4096", "publisher": {"id": "u-ada", "name": "ada@example.com"}}],
+    "datasources/ds-campaigns": [{"revisionNumber": "1", "publishedAt": "2024-07-01T09:00:00Z", "deleted": false, "current": true, "sizeInBytes": "512", "publisher": {"id": "u-grace", "name": "grace@example.com"}}],
+    "datasources/ds-hr": [{"revisionNumber": "1", "publishedAt": "2025-08-01T09:00:00Z", "deleted": false, "current": true, "sizeInBytes": "768", "publisher": {"id": "u-alan", "name": "alan@example.com"}}]
+  },
+  "metadata": {
+    "tables": {
+      "t-orders": {"id": "t-orders", "name": "ORDERS", "schema": "PUBLIC", "fullName": "[PUBLIC].[ORDERS]", "connectionType": "snowflake", "database": {"name": "ANALYTICS", "connectionType": "snowflake"}},
+      "t-customers": {"id": "t-customers", "name": "CUSTOMERS", "schema": "PUBLIC", "fullName": "[PUBLIC].[CUSTOMERS]", "connectionType": "snowflake", "database": {"name": "ANALYTICS", "connectionType": "snowflake"}},
+      "t-events": {"id": "t-events", "name": "events", "schema": "public", "fullName": "[public].[events]", "connectionType": "postgres", "database": {"name": "marketing", "connectionType": "postgres"}},
+      "t-headcount": {"id": "t-headcount", "name": "headcount", "schema": "dbo", "fullName": "[dbo].[headcount]", "connectionType": "sqlserver", "database": {"name": "hr", "connectionType": "sqlserver"}}
+    },
+    "workbooks": [
+      {"luid": "wb-sales", "name": "Sales Overview", "upstreamTables": ["t-orders", "t-customers"], "embeddedDatasources": [{"name": "Orders", "fields": [
+        {"name": "Sales", "__typename": "ColumnField", "description": "", "upstreamColumns": [{"name": "SALES", "table": "t-orders"}]},
+        {"name": "Profit Ratio", "__typename": "CalculatedField", "description": "Margin", "formula": "SUM([Profit])/SUM([Sales])", "upstreamColumns": [{"name": "PROFIT", "table": "t-orders"}, {"name": "SALES", "table": "t-orders"}]},
+        {"name": "Customer Name", "__typename": "ColumnField", "description": "", "upstreamColumns": [{"name": "NAME", "table": "t-customers"}]}
+      ]}]},
+      {"luid": "wb-q3", "name": "Q3 Results", "upstreamTables": ["t-orders"], "embeddedDatasources": [{"name": "Q3 extract", "fields": [
+        {"name": "Region", "__typename": "ColumnField", "description": "", "upstreamColumns": [{"name": "REGION", "table": "t-orders"}]},
+        {"name": "Number of Records", "__typename": "CalculatedField", "description": "", "formula": "1", "upstreamColumns": []}
+      ]}]},
+      {"luid": "wb-campaigns", "name": "Campaign Performance", "upstreamTables": ["t-events"], "embeddedDatasources": [{"name": "Campaign Events", "fields": [
+        {"name": "Clicks", "__typename": "ColumnField", "description": "", "upstreamColumns": [{"name": "clicks", "table": "t-events"}]}
+      ]}]},
+      {"luid": "wb-scratch", "name": "Scratchpad", "upstreamTables": [], "embeddedDatasources": []}
+    ],
+    "datasources": [
+      {"luid": "ds-orders", "name": "Orders", "upstreamTables": ["t-orders", "t-customers"], "fields": [
+        {"name": "Sales", "__typename": "ColumnField", "description": "", "upstreamColumns": [{"name": "SALES", "table": "t-orders"}]},
+        {"name": "Customer Name", "__typename": "ColumnField", "description": "", "upstreamColumns": [{"name": "NAME", "table": "t-customers"}]}
+      ]},
+      {"luid": "ds-campaigns", "name": "Campaign Events", "upstreamTables": ["t-events"], "fields": [
+        {"name": "Clicks", "__typename": "ColumnField", "description": "", "upstreamColumns": [{"name": "clicks", "table": "t-events"}]}
+      ]},
+      {"luid": "ds-hr", "name": "Headcount", "upstreamTables": ["t-headcount"], "fields": [
+        {"name": "Employees", "__typename": "CalculatedField", "description": "", "formula": "COUNTD([employee_id])", "upstreamColumns": [{"name": "employee_id", "table": "t-headcount"}]}
+      ]}
+    ],
+    "custom_sql": [
+      {"id": "csql-1", "name": "Custom SQL Query", "query": "SELECT * FROM PUBLIC.ORDERS WHERE REGION = 'EMEA'", "connectionType": "snowflake", "isUnsupportedCustomSql": false, "database": {"name": "ANALYTICS"}, "tables": ["t-orders"], "downstreamWorkbooks": [{"luid": "wb-q3", "name": "Q3 Results"}], "downstreamDatasources": []},
+      {"id": "csql-2", "name": "Custom SQL Query (2)", "query": "WITH x AS (SELECT * FROM events) SELECT campaign, count(*) FROM x GROUP BY 1", "connectionType": "postgres", "isUnsupportedCustomSql": true, "database": {"name": "marketing"}, "tables": [], "downstreamWorkbooks": [{"luid": "wb-campaigns", "name": "Campaign Performance"}], "downstreamDatasources": [{"luid": "ds-campaigns", "name": "Campaign Events"}]}
+    ]
+  }
+}

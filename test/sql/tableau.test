@@ -1,0 +1,580 @@
+# name: test/sql/tableau.test
+# description: SQL tests for the tableau worker against the offline Tableau replay server (test/mock_api/server.py)
+# group: [tableau]
+
+require vgi
+
+require-env TABLEAU_WORKER
+
+require-env TABLEAU_FIXTURE_URL
+
+# httpfs + json read the replay server's /__requests log to assert what was pushed down.
+statement ok
+LOAD httpfs;
+
+statement ok
+LOAD json;
+
+statement ok
+ATTACH 'tableau' (TYPE vgi, LOCATION '{TABLEAU_WORKER}');
+
+# ---------------------------------------------------------------- secret errors
+
+statement error
+SELECT count(*) FROM tableau.main.workbooks;
+----
+<REGEX>:.*no tableau secret.*
+
+statement ok
+CREATE SECRET tableau_bad (TYPE tableau, SERVER_URL '{TABLEAU_FIXTURE_URL}', SITE_CONTENT_URL 'acme', PAT_NAME 'vgi-test', PAT_SECRET 'wrong');
+
+statement error
+SELECT count(*) FROM tableau.main.workbooks;
+----
+<REGEX>:.*sign-in failed with HTTP 401.*401001.*
+
+statement ok
+DROP SECRET tableau_bad;
+
+statement ok
+CREATE SECRET tableau_wrong_site (TYPE tableau, SERVER_URL '{TABLEAU_FIXTURE_URL}', SITE_CONTENT_URL 'other', PAT_NAME 'vgi-test', PAT_SECRET 'test-pat-secret');
+
+statement error
+SELECT count(*) FROM tableau.main.workbooks;
+----
+<REGEX>:.*HTTP 401.*site not found.*
+
+statement ok
+DROP SECRET tableau_wrong_site;
+
+statement ok
+CREATE SECRET tableau_insecure (TYPE tableau, SERVER_URL 'http://tableau.example.com', PAT_NAME 'x', PAT_SECRET 'y');
+
+statement error
+SELECT count(*) FROM tableau.main.workbooks;
+----
+<REGEX>:.*https.*
+
+statement ok
+DROP SECRET tableau_insecure;
+
+statement ok
+CREATE SECRET tableau_nocred (TYPE tableau, SERVER_URL '{TABLEAU_FIXTURE_URL}', SITE_CONTENT_URL 'acme');
+
+statement error
+SELECT count(*) FROM tableau.main.workbooks;
+----
+<REGEX>:.*PAT_NAME \+ PAT_SECRET.*
+
+statement ok
+DROP SECRET tableau_nocred;
+
+# A small page size so every list pages several times.
+statement ok
+CREATE SECRET tableau_fixture (TYPE tableau, SERVER_URL '{TABLEAU_FIXTURE_URL}', SITE_CONTENT_URL 'acme', PAT_NAME 'vgi-test', PAT_SECRET 'test-pat-secret', PAGE_SIZE '2');
+
+# ------------------------------------------------------------ sites, workbooks
+
+query TTTT
+SELECT name, content_url, state, revision_history_enabled FROM tableau.main.sites;
+----
+Acme Analytics	acme	Active	true
+
+query TTTTITT
+SELECT id, name, folder_path, owner, size_mb, url, tags FROM tableau.main.workbooks ORDER BY id;
+----
+wb-campaigns	Campaign Performance	Marketing	grace@example.com	30	https://acme.example/#/site/acme/workbooks/103	[marketing]
+wb-q3	Q3 Results	Finance/Quarterly	grace@example.com	4	https://acme.example/#/site/acme/workbooks/102	[]
+wb-sales	Sales Overview	Finance	ada@example.com	12	https://acme.example/#/site/acme/workbooks/101	[finance, certified]
+wb-scratch	Scratchpad	Sandbox	alan@example.com	1	https://acme.example/#/site/acme/workbooks/104	[]
+
+# The API version was discovered from serverinfo and every page was requested.
+query I
+SELECT count(*) FROM read_json('{TABLEAU_FIXTURE_URL}/__requests?route=/workbooks') WHERE version = '3.24' AND query LIKE '%"pageSize": "2"%';
+----
+2
+
+# Pushdown: a time bound (widened down to the whole second, so Tableau also returns
+# Scratchpad, updated at 09:00:00 exactly) and a name IN list. The SDK re-applies the
+# exact predicate, so Scratchpad is dropped again.
+query T
+SELECT name FROM tableau.main.workbooks WHERE updated_at >= TIMESTAMPTZ '2026-01-10 09:00:00.250+00' AND name IN ('Scratchpad', 'Q3 Results', 'Sales Overview') ORDER BY name;
+----
+Sales Overview
+
+query I
+SELECT count(*) FROM read_json('{TABLEAU_FIXTURE_URL}/__requests?route=/workbooks') WHERE query LIKE '%updatedAt:gte:2026-01-10T09:00:00Z,name:in:[Scratchpad,Q3 Results,Sales Overview]%';
+----
+1
+
+# ------------------------------------------------------------ dashboards/charts
+
+query TTTTTITT
+SELECT tool, id, title, folder_path, owner, view_count, url, sheet_type FROM tableau.main.dashboards ORDER BY id;
+----
+tableau	v-camp-dash	Campaign Dashboard	Marketing	grace@example.com	980	{TABLEAU_FIXTURE_URL}/#/site/acme/views/CampaignPerformance/CampaignDashboard	dashboard
+tableau	v-q3-dash	Q3 Summary	Finance/Quarterly	grace@example.com	410	{TABLEAU_FIXTURE_URL}/#/site/acme/views/Q3Results/Q3Summary	dashboard
+tableau	v-q3-story	Q3 Story	Finance/Quarterly	grace@example.com	75	{TABLEAU_FIXTURE_URL}/#/site/acme/views/Q3Results/Q3Story	story
+tableau	v-sales-dash	Sales Dashboard	Finance	ada@example.com	1520	{TABLEAU_FIXTURE_URL}/#/site/acme/views/SalesOverview/SalesDashboard	dashboard
+
+query TTI
+SELECT title, workbook_name, view_count FROM tableau.main.charts WHERE workbook_name = 'Sales Overview' ORDER BY title;
+----
+Monthly Trend	Sales Overview	0
+Sales by Region	Sales Overview	340
+
+query I
+SELECT count(*) FROM read_json('{TABLEAU_FIXTURE_URL}/__requests?route=/views') WHERE query LIKE '%workbookName:eq:Sales Overview%' AND query LIKE '%includeUsageStatistics%';
+----
+2
+
+query TTT
+SELECT title, created_at, last_viewed_at FROM tableau.main.charts WHERE view_count = 0 ORDER BY title;
+----
+Funnel	2024-05-05 09:00:00+00	NULL
+Monthly Trend	2025-03-01 09:00:00+00	NULL
+
+# Top-N: DuckDB's ORDER BY … LIMIT hint becomes Tableau's sort.
+query TI
+SELECT title, view_count FROM tableau.main.content_usage ORDER BY view_count DESC LIMIT 2;
+----
+Sales Dashboard	1520
+Campaign Dashboard	980
+
+query I
+SELECT count(*) > 0 FROM read_json('{TABLEAU_FIXTURE_URL}/__requests?route=/views') WHERE query LIKE '%"sort": "hitsTotal:desc"%';
+----
+true
+
+query TII
+SELECT workbook_name, count(*), sum(view_count) FROM tableau.main.content_usage GROUP BY ALL ORDER BY 1;
+----
+Campaign Performance	2	980
+Q3 Results	3	497
+Sales Overview	3	1860
+Scratchpad	1	3
+
+# The BI vocabulary columns UNION across tables.
+query TI
+SELECT tool, count(*) FROM (SELECT tool, id, title, folder_path, owner, created_at, updated_at, last_viewed_at, view_count, url FROM tableau.main.dashboards UNION ALL SELECT tool, id, title, folder_path, owner, created_at, updated_at, last_viewed_at, view_count, url FROM tableau.main.charts UNION ALL SELECT tool, id, title, folder_path, owner, created_at, updated_at, last_viewed_at, view_count, url FROM tableau.main.data_sources) GROUP BY tool;
+----
+tableau	12
+
+# ------------------------------------------------------------------- folders
+
+query TTTTIT
+SELECT id, title, folder_path, parent_path, depth, owner FROM tableau.main.folders ORDER BY folder_path;
+----
+p-finance	Finance	Finance	NULL	0	ada@example.com
+p-quarterly	Quarterly	Finance/Quarterly	Finance	1	grace@example.com
+p-marketing	Marketing	Marketing	NULL	0	grace@example.com
+p-sandbox	Sandbox	Sandbox	NULL	0	alan@example.com
+
+query T
+SELECT title FROM tableau.main.folders WHERE top_level ORDER BY 1;
+----
+Finance
+Marketing
+Sandbox
+
+query I
+SELECT count(*) FROM read_json('{TABLEAU_FIXTURE_URL}/__requests?route=/projects') WHERE query LIKE '%topLevelProject:eq:true%' AND query LIKE '%"pageNumber": "1"%';
+----
+1
+
+query TI
+SELECT f.folder_path, count(d.id) FROM tableau.main.folders f LEFT JOIN tableau.main.dashboards d USING (folder_path) GROUP BY ALL ORDER BY 1;
+----
+Finance	1
+Finance/Quarterly	2
+Marketing	1
+Sandbox	0
+
+# --------------------------------------------------------------------- users
+
+query TTTTT
+SELECT tool, name, full_name, site_role, last_login FROM tableau.main.users ORDER BY name;
+----
+tableau	ada@example.com	Ada Lovelace	SiteAdministratorCreator	2026-11-10 09:00:00+00
+tableau	alan@example.com	Alan Turing	Explorer	2026-06-01 08:00:00+00
+tableau	grace@example.com	Grace Hopper	Creator	2026-11-01 12:30:00+00
+tableau	kat@example.com	Katherine Johnson	Viewer	NULL
+tableau	margaret@example.com	Margaret Hamilton	Viewer	2026-10-15 16:45:00+00
+tableau	radia@example.com	Radia Perlman	Unlicensed	NULL
+
+query TT
+SELECT name, site_role FROM tableau.main.users WHERE site_role IN ('Creator', 'Viewer') AND last_login < TIMESTAMPTZ '2026-11-05 00:00:00+00' ORDER BY name;
+----
+grace@example.com	Creator
+margaret@example.com	Viewer
+
+query I
+SELECT count(*) FROM read_json('{TABLEAU_FIXTURE_URL}/__requests?route=/users') WHERE query LIKE '%siteRole:in:[Creator,Viewer],lastLogin:lte:2026-11-05T00:00:00Z%';
+----
+1
+
+# -------------------------------------------------------- groups and members
+
+query TTTT
+SELECT id, name, domain_name, minimum_site_role FROM tableau.main.groups ORDER BY id;
+----
+g-all	All Users	local	NULL
+g-finance	Finance	local	NULL
+g-mkt	Marketing	example.com	Explorer
+
+query TI
+SELECT group_name, count(*) FROM tableau.main.group_members GROUP BY ALL ORDER BY 1;
+----
+All Users	6
+Finance	2
+Marketing	2
+
+# A pushed group_id reads only that group.
+query TT
+SELECT group_name, user_name FROM tableau.main.group_members WHERE group_id = 'g-mkt' ORDER BY user_name;
+----
+Marketing	grace@example.com
+Marketing	kat@example.com
+
+query I
+SELECT count(*) FROM read_json('{TABLEAU_FIXTURE_URL}/__requests?route=/groups/g-finance/users');
+----
+1
+
+# ---------------------------------------------------------------- data sources
+
+query TTTTTT
+SELECT id, title, datasource_type, folder_path, is_certified, has_extracts FROM tableau.main.data_sources ORDER BY id;
+----
+ds-campaigns	Campaign Events	postgres	Marketing	false	false
+ds-hr	Headcount	sqlserver	Sandbox	false	true
+ds-orders	Orders	snowflake	Finance	true	true
+
+query TT
+SELECT title, certification_note FROM tableau.main.data_sources WHERE is_certified;
+----
+Orders	Finance-approved
+
+query I
+SELECT count(*) FROM read_json('{TABLEAU_FIXTURE_URL}/__requests?route=/datasources') WHERE query LIKE '%isCertified:eq:true%';
+----
+1
+
+# ----------------------------------------------------------------- connections
+
+query TTTTTTT
+SELECT content_type, content_id, content_name, connection_type, server_address, username, embed_password FROM tableau.main.connections ORDER BY content_type, content_id;
+----
+datasource	ds-campaigns	Campaign Events	postgres	pg.internal	analyst	false
+datasource	ds-hr	Headcount	sqlserver	hr-sql.internal	hr_reader	true
+datasource	ds-orders	Orders	snowflake	acme.snowflakecomputing.com	TABLEAU_SVC	true
+workbook	wb-campaigns	Campaign Performance	sqlproxy	acme.example	NULL	false
+workbook	wb-q3	Q3 Results	snowflake	acme.snowflakecomputing.com	Q3_READER	false
+workbook	wb-sales	Sales Overview	sqlproxy	acme.example	NULL	false
+workbook	wb-scratch	Scratchpad	excel-direct	NULL	NULL	false
+
+# No column ever carries a password.
+query I
+SELECT count(*) FROM tableau.main.connections c WHERE CAST(c AS VARCHAR) LIKE '%hunter2%';
+----
+0
+
+query TT
+SELECT content_name, username FROM tableau.main.connections WHERE content_id = 'ds-hr' AND content_type = 'datasource';
+----
+Headcount	hr_reader
+
+# content_type = 'datasource' with a pushed id: one call, no workbook lookup.
+query I
+SELECT count(*) FROM read_json('{TABLEAU_FIXTURE_URL}/__requests?route=/workbooks/ds-hr/connections');
+----
+0
+
+# Two full scans above plus this pushed one.
+query I
+SELECT count(*) FROM read_json('{TABLEAU_FIXTURE_URL}/__requests?route=/datasources/ds-hr/connections');
+----
+3
+
+# ------------------------------------------------------------------- usage
+
+query TTTT
+SELECT user_id, content_type, content_id, content_name FROM tableau.main.favorites ORDER BY user_id, position;
+----
+u-ada	view	v-sales-dash	Sales Dashboard
+u-ada	workbook	wb-q3	Q3 Results
+u-grace	view	v-sales-dash	Sales Dashboard
+u-grace	datasource	ds-orders	Orders
+u-kat	view	v-camp-dash	Campaign Dashboard
+
+query I
+SELECT count(*) FROM tableau.main.favorites WHERE user_id = 'u-grace';
+----
+2
+
+# Recipients are masked.
+query TTTTT
+SELECT id, content_type, content_id, user_masked, suspended FROM tableau.main.subscriptions ORDER BY id;
+----
+sub-1	View	v-sales-dash	k***@example.com	false
+sub-2	Workbook	wb-q3	m***@example.com	true
+sub-3	View	v-camp-dash	a***@example.com	false
+
+query I
+SELECT count(*) FROM tableau.main.subscriptions s WHERE CAST(s AS VARCHAR) LIKE '%kat@example.com%';
+----
+0
+
+query TTTI
+SELECT id, view_name, owner_masked, recipient_count FROM tableau.main.data_alerts ORDER BY id;
+----
+alert-1	Sales Dashboard	a***@example.com	3
+alert-2	Funnel	g***@example.com	1
+
+# recipient_count is only fetched when selected.
+query I
+SELECT count(*) FROM read_json('{TABLEAU_FIXTURE_URL}/__requests?route=/dataAlerts/alert-1');
+----
+1
+
+query T
+SELECT subject FROM tableau.main.data_alerts ORDER BY 1;
+----
+Funnel empty
+Sales drop
+
+query I
+SELECT count(*) FROM read_json('{TABLEAU_FIXTURE_URL}/__requests?route=/dataAlerts/alert-1');
+----
+1
+
+# --------------------------------------------------------------- operations
+
+query TTTT
+SELECT id, schedule_type, frequency, state FROM tableau.main.schedules ORDER BY id;
+----
+sch-flows	Flow	Daily	Suspended
+sch-nightly	Extract	Daily	Active
+sch-weekly	Subscription	Weekly	Active
+
+query TTTI
+SELECT id, refresh_type, content_type, consecutive_failed_count FROM tableau.main.extract_refresh_tasks ORDER BY id;
+----
+task-hr	IncrementalRefresh	datasource	3
+task-orders	FullRefresh	datasource	0
+task-q3	FullRefresh	workbook	1
+
+# The first /jobs request is rate-limited (429 + Retry-After) and retried.
+query TTTR
+SELECT id, job_type, title, duration_seconds FROM tableau.main.jobs WHERE status = 'Failed' ORDER BY id;
+----
+job-2	increment_extracts	Headcount	60.0
+job-3	refresh_extracts	Q3 Results	600.0
+
+query I
+SELECT count(*) FROM read_json('{TABLEAU_FIXTURE_URL}/__requests?route=/jobs') WHERE query LIKE '%status:eq:Failed%';
+----
+2
+
+query TTTT
+SELECT id, name, folder_path, owner FROM tableau.main.flows ORDER BY id;
+----
+f-clean	Clean Orders	Finance	ada@example.com
+f-leads	Lead Scoring	Marketing	grace@example.com
+
+query TTTR
+SELECT id, flow_name, status, duration_seconds FROM tableau.main.flow_runs ORDER BY id;
+----
+fr-1	Clean Orders	Success	600.0
+fr-2	Lead Scoring	Failed	120.0
+fr-3	Lead Scoring	Success	300.0
+
+query T
+SELECT id FROM tableau.main.flow_runs WHERE flow_id = 'f-leads' AND started_at >= TIMESTAMPTZ '2026-11-14 00:00:00+00';
+----
+fr-3
+
+query I
+SELECT count(*) FROM read_json('{TABLEAU_FIXTURE_URL}/__requests?route=/flows/runs') WHERE query LIKE '%flowId:eq:f-leads,startedAt:gte:2026-11-14T00:00:00Z%';
+----
+1
+
+# ---------------------------------------------------------------- revisions
+
+query TTII
+SELECT content_type, content_name, count(*), max(revision_number) FROM tableau.main.revisions GROUP BY ALL ORDER BY 1, 2;
+----
+datasource	Campaign Events	1	1
+datasource	Headcount	1	1
+datasource	Orders	2	2
+workbook	Campaign Performance	2	2
+workbook	Q3 Results	1	1
+workbook	Sales Overview	3	3
+workbook	Scratchpad	1	1
+
+query ITT
+SELECT revision_number, publisher_name, is_current FROM tableau.main.revisions WHERE content_id = 'wb-sales' ORDER BY 1;
+----
+1	ada@example.com	false
+2	ada@example.com	false
+3	grace@example.com	true
+
+# --------------------------------------------------------- Metadata API lineage
+
+query TTT
+SELECT content_type, content_name, qualified_name FROM tableau.main.lineage_tables ORDER BY ALL;
+----
+datasource	Campaign Events	marketing.public.events
+datasource	Headcount	hr.dbo.headcount
+datasource	Orders	analytics.public.customers
+datasource	Orders	analytics.public.orders
+workbook	Campaign Performance	marketing.public.events
+workbook	Q3 Results	analytics.public.orders
+workbook	Sales Overview	analytics.public.customers
+workbook	Sales Overview	analytics.public.orders
+
+query TTTT
+SELECT database_name, schema_name, table_name, full_name FROM tableau.main.lineage_tables WHERE content_id = 'ds-hr';
+----
+hr	dbo	headcount	[dbo].[headcount]
+
+query I
+SELECT count(*) FROM read_json('{TABLEAU_FIXTURE_URL}/__requests?route=/graphql/publishedDatasourcesConnection') WHERE query LIKE '%"luidWithin": ["ds-hr"]%';
+----
+1
+
+# content_type = 'workbook' skips the data source connection entirely.
+query T
+SELECT content_name FROM tableau.main.lineage_tables WHERE content_type = 'workbook' AND qualified_name = 'analytics.public.orders' ORDER BY 1;
+----
+Q3 Results
+Sales Overview
+
+query TTTTT
+SELECT datasource_name, field_name, field_type, upstream_qualified_table, upstream_column FROM tableau.main.field_lineage WHERE content_name = 'Sales Overview' ORDER BY ALL;
+----
+Orders	Customer Name	ColumnField	analytics.public.customers	NAME
+Orders	Profit Ratio	CalculatedField	analytics.public.orders	PROFIT
+Orders	Profit Ratio	CalculatedField	analytics.public.orders	SALES
+Orders	Sales	ColumnField	analytics.public.orders	SALES
+
+query TTT
+SELECT content_name, field_name, upstream_column FROM tableau.main.field_lineage WHERE formula = '1';
+----
+Q3 Results	Number of Records	NULL
+
+query TTTT
+SELECT id, connection_type, workbook_names, is_unsupported_custom_sql FROM tableau.main.queries ORDER BY id;
+----
+csql-1	snowflake	[Q3 Results]	false
+csql-2	postgres	[Campaign Performance]	true
+
+query T
+SELECT query_text FROM tableau.main.queries WHERE id = 'csql-1';
+----
+SELECT * FROM PUBLIC.ORDERS WHERE REGION = 'EMEA'
+
+query I
+SELECT count(*) FROM read_json('{TABLEAU_FIXTURE_URL}/__requests?route=/graphql/customSQLTablesConnection') WHERE query LIKE '%"idWithin": ["csql-1"]%';
+----
+1
+
+# ------------------------------------------------------------- unified.runs
+
+query TTTTTTR
+SELECT orchestrator, run_id, pipeline, status, raw_status, ended_at, duration_seconds FROM tableau.unified.runs ORDER BY run_id;
+----
+tableau	fr-1	Clean Orders	success	Success	2026-11-14 04:10:00+00	600.0
+tableau	fr-2	Lead Scoring	failed	Failed	2026-11-13 05:02:00+00	120.0
+tableau	fr-3	Lead Scoring	success	Success	2026-11-14 05:05:00+00	300.0
+tableau	job-1	Orders	success	Success	2026-11-14 02:03:05+00	180.0
+tableau	job-2	Headcount	failed	Failed	2026-11-14 03:01:10+00	60.0
+tableau	job-3	Q3 Results	failed	Failed	2026-11-13 02:10:30+00	600.0
+tableau	job-5	Orders	running	InProgress	NULL	NULL
+tableau	job-7	Headcount	queued	Pending	NULL	NULL
+
+query TT
+SELECT run_id, url FROM tableau.unified.runs WHERE status IN ('failed', 'queued') ORDER BY run_id;
+----
+fr-2	https://acme.example/#/site/acme/flows/302
+job-2	NULL
+job-3	NULL
+job-7	NULL
+
+query I
+SELECT count(*) FROM read_json('{TABLEAU_FIXTURE_URL}/__requests?route=/jobs') WHERE query LIKE '%jobType:in:[refresh_extracts,increment_extracts],status:in:[Failed,Pending]%' AND query LIKE '%"pageNumber": "1"%';
+----
+1
+
+# The shared orchestrator shape: exactly these columns, in this order.
+query TT
+SELECT column_name, column_type FROM (DESCRIBE SELECT * FROM tableau.unified.runs);
+----
+orchestrator	VARCHAR
+run_id	VARCHAR
+pipeline	VARCHAR
+status	VARCHAR
+raw_status	VARCHAR
+trigger	VARCHAR
+queued_at	TIMESTAMP WITH TIME ZONE
+started_at	TIMESTAMP WITH TIME ZONE
+ended_at	TIMESTAMP WITH TIME ZONE
+duration_seconds	DOUBLE
+url	VARCHAR
+
+# ------------------------------------------------ session expiry → re-sign-in
+
+# The replay server expires its first session token after three calls; the
+# worker signed in again and carried on.
+query I
+SELECT count(*) >= 2 FROM read_json('{TABLEAU_FIXTURE_URL}/__requests?route=/auth/signin') WHERE auth = 'pat';
+----
+true
+
+# ------------------------------------------------- connected app, API version
+
+statement ok
+DROP SECRET tableau_fixture;
+
+statement ok
+CREATE SECRET tableau_app (TYPE tableau, SERVER_URL '{TABLEAU_FIXTURE_URL}', SITE_CONTENT_URL 'acme', CLIENT_ID 'client-id-1', SECRET_ID 'secret-id-1', SECRET_VALUE 'test-connected-app-secret-value', USERNAME 'grace@example.com', API_VERSION '3.20');
+
+query I
+SELECT count(*) FROM tableau.main.groups;
+----
+3
+
+query I
+SELECT count(*) FROM read_json('{TABLEAU_FIXTURE_URL}/__requests?route=/auth/signin') WHERE auth = 'jwt' AND version = '3.20';
+----
+1
+
+query I
+SELECT count(*) FROM read_json('{TABLEAU_FIXTURE_URL}/__requests?route=/groups') WHERE version = '3.20';
+----
+1
+
+statement ok
+DROP SECRET tableau_app;
+
+statement ok
+CREATE SECRET tableau_app_bad (TYPE tableau, SERVER_URL '{TABLEAU_FIXTURE_URL}', SITE_CONTENT_URL 'acme', CLIENT_ID 'client-id-1', SECRET_ID 'secret-id-1', SECRET_VALUE 'not-the-secret', USERNAME 'grace@example.com');
+
+statement error
+SELECT count(*) FROM tableau.main.groups;
+----
+<REGEX>:.*HTTP 401.*JWT signature invalid.*
+
+statement ok
+DROP SECRET tableau_app_bad;
+
+statement ok
+CREATE SECRET tableau_app_write (TYPE tableau, SERVER_URL '{TABLEAU_FIXTURE_URL}', SITE_CONTENT_URL 'acme', CLIENT_ID 'client-id-1', SECRET_ID 'secret-id-1', SECRET_VALUE 'test-connected-app-secret-value', USERNAME 'grace@example.com', SCOPES 'tableau:content:read tableau:content:write');
+
+statement error
+SELECT count(*) FROM tableau.main.groups;
+----
+<REGEX>:.*HTTP 401.*read-only.*
+
+statement ok
+DROP SECRET tableau_app_write;

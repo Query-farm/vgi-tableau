@@ -1,0 +1,30 @@
+# vgi-lint settings for this worker: https://github.com/Query-farm/vgi-lint-check
+# `make lint-explain`, `vgi-lint lint` in this directory, and CI's metadata job all
+# read this file. Look up a rule with `vgi-lint explain VGI123`; print the metadata tag
+# contract with `vgi-lint spec`.
+
+# The worker to attach, relative to this directory. Build it first with `make build`.
+location = "bin/vgi-tableau-worker"
+
+# Fail on warnings while you build. Raise this to "info" before you publish the worker.
+fail_on = "info"
+
+# Waive a finding only with a kind and a reason, so the waiver can be audited:
+#   domain-exemption  permanent and legitimate for this worker
+#   deferred          a real defect you will fix; add expires = "YYYY-MM-DD"
+#   timing            slow or flaky because of the environment, not the metadata
+#   tooling-bug       the linter is wrong; report it upstream
+ignore = [
+  { code = "VGI144", object = "tableau.main.content_usage", kind = "domain-exemption", reason = "content_usage is a fixed name in the shared Query.Farm BI vocabulary (Looker, Tableau, ...) so the tables UNION across workers" },
+  { code = "VGI144", object = "tableau.main.field_lineage", kind = "domain-exemption", reason = "lineage is a mass noun; field_lineage pairs with lineage_tables and has no natural plural" },
+  { code = "VGI807", object = "tableau.main.field_lineage", kind = "domain-exemption", reason = "one row per (field, upstream column); fields without an upstream column repeat with NULLs and Tableau field names are not unique within a workbook, so no column set is a key" },
+  { code = "VGI808", object = "tableau.unified.runs", kind = "domain-exemption", reason = "run_id is this table's own primary key in the shared orchestrator runs shape, not a reference" },
+  { code = "VGI808", object = "tableau.main.subscriptions", kind = "domain-exemption", reason = "schedule_id references Tableau Server schedules; Tableau Cloud has none (schedules is empty there), so a foreign key would be false. user_id has a declared foreign key" },
+  { code = "VGI808", object = "tableau.main.extract_refresh_tasks", kind = "domain-exemption", reason = "schedule_id references Tableau Server schedules; Tableau Cloud has none (schedules is empty there), so a foreign key would be false" },
+  { code = "VGI809", kind = "domain-exemption", reason = "content_id is polymorphic (a view, workbook, data source, flow or project LUID, told apart by content_type), so it cannot be a foreign key to any one table" },
+]
+
+# Adopting the gate on a worker that already has findings? Record them once with
+#   vgi-lint lint --baseline vgi-lint-baseline --update-baseline
+# and uncomment the next line. Only new findings fail after that.
+# baseline = "vgi-lint-baseline"
