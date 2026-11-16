@@ -1,5 +1,5 @@
 {
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "type": "module",
   "description": "Tableau Cloud / Tableau Server metadata and usage (dashboards, workbooks, data sources, users, jobs, flows, Metadata API lineage) as SQL tables in DuckDB.",
