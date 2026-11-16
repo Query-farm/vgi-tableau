@@ -120,21 +120,26 @@ export const CATALOG_DOC_MD =
   "passwords are never returned.\n\n" +
   SOURCES_MD;
 
+export const SCHEMA_COMMENT = "Read-only Tableau site content, people, usage, operations and Metadata API lineage.";
+
 export const SCHEMA_DOC_LLM =
-  "Tableau site collections as SQL tables (no arguments; filter with WHERE). BI-vocabulary tables: " +
-  "dashboards (dashboards + stories), charts (worksheets), content_usage (view counts of every view), folders " +
-  "(projects, with full path), data_sources (published), connections, users, queries (custom SQL). Native " +
-  "tables: sites, workbooks, groups, group_members, favorites, subscriptions, data_alerts, schedules (Server " +
-  "only), extract_refresh_tasks, jobs, flows, flow_runs, revisions, lineage_tables and field_lineage " +
-  "(Metadata API). Per-item collections (connections, revisions, group_members, favorites) read only the " +
-  "items named by a pushed `= / IN` filter on their key column, otherwise every item. All tables need a " +
-  "`tableau` secret.";
+  "Tableau site collections as SQL tables (no arguments; filter with WHERE). Two kinds of table live here: " +
+  "BI-vocabulary tables (dashboards, worksheets, view usage, projects as folders, published data sources, " +
+  "connections, users, custom SQL) that share columns with the other Query.Farm BI workers so they UNION, " +
+  "and Tableau-native tables for workbooks, groups, favorites, subscriptions and alerts, schedules, extract " +
+  "refreshes, jobs, Prep flows, revisions and Metadata API lineage. Per-item collections read only the items " +
+  "named by a pushed `= / IN` filter on their key column, otherwise every item (one extra call each). Other " +
+  "WHERE filters push down into Tableau's REST `filter=` syntax and are re-checked exactly. " +
+  "All tables need a `tableau` secret.";
 
 export const SCHEMA_DOC_MD =
   "## main\n\n" +
   "Tableau site content, people, usage, operations and lineage as tables.\n\n" +
   "Per-item collections (connections, revisions, group members, favorites) take their parent id from a " +
   "pushed filter and otherwise read every parent. All tables need a `tableau` secret.";
+
+export const UNIFIED_COMMENT =
+  "Tableau extract refreshes and Prep flow runs in the cross-tool orchestrator runs shape.";
 
 export const UNIFIED_DOC_LLM =
   "Cross-tool shapes shared with the Query.Farm orchestrator workers (Airflow, Dagster, Prefect, Temporal, " +
