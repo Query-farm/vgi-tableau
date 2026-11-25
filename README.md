@@ -153,7 +153,7 @@ LOAD vgi FROM query_farm;
 ATTACH 'tableau' (TYPE vgi, LOCATION '/abs/path/to/vgi-tableau/bin/vgi-tableau-worker');
 ```
 
-**Haybarn 2.0** (`uvx haybarn-cli`):
+**Haybarn 2.0.1+** (`uvx haybarn-cli`; Haybarn 2.0.0 serves an older vgi extension that cannot attach this worker):
 
 ```sql
 INSTALL vgi FROM community;
